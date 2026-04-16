@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام تسجيل الحضور والبيانات</title>
+    <style>
+        /* تصميم عصري وجذاب */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 500px;
+            transition: all 0.3s ease;
+        }
+
+        h2 { text-align: center; color: #4a148c; }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box; /* لضمان عدم خروج الإدخال عن الحاوية */
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-submit { background-color: #6c63ff; color: white; }
+        .btn-submit:hover { background-color: #5750d8; }
+
+        .btn-admin { background-color: #f3f4f6; color: #555; border: 1px solid #ddd; }
+        .btn-admin:hover { background-color: #e5e7eb; }
+
+        .hidden { display: none; }
+
+        /* تنسيق الجدول */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: right;
+        }
+        th { background-color: #f8f9fa; }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #6c63ff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <div id="login-view">
+        <h2>تسجيل دخول جديد</h2>
+        <div class="input-group">
+            <label>الاسم الكامل:</label>
+            <input type="text" id="userName" placeholder="أدخل اسمك هنا...">
+        </div>
+        <div class="input-group">
+            <label>البريد الإلكتروني:</label>
+            <input type="email" id="userEmail" placeholder="example@mail.com">
+        </div>
+        <button class="btn-submit" onclick="saveData()">تسجيل الآن</button>
+        <hr style="margin: 20px 0; opacity: 0.3;">
+        <button class="btn-admin" onclick="showAdminPrompt()">لوحة الإدارة (خاص بالمدير)</button>
+    </div>
+
+    <div id="admin-prompt" class="hidden">
+        <h2>التحقق من الهوية</h2>
+        <p style="text-align: center;">يرجى إدخال كود الوصول لرؤية البيانات</p>
+        <input type="password" id="adminCodeInput" placeholder="أدخل الكود السري...">
+        <button class="btn-submit" onclick="verifyAdmin()">فتح البيانات</button>
+        <a class="back-link" onclick="goBack()">إلغاء والعودة</a>
+    </div>
+
+    <div id="data-view" class="hidden">
+        <h2>قائمة البيانات المسجلة</h2>
+        <div style="overflow-x: auto;">
+            <table id="userTable">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>الإيميل</th>
+                        <th>التوقيت</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    </tbody>
+            </table>
+        </div>
+        <button class="btn-admin" style="margin-top: 20px; color: red;" onclick="clearAllData()">مسح كافة البيانات</button>
+        <a class="back-link" onclick="goBack()">العودة للرئيسية</a>
+    </div>
+</div>
+
+<script>
+    // الإعدادات
+    const SECRET_CODE = "2026"; // الكود الخاص بك (يمكنك تغييره)
+    let users = JSON.parse(localStorage.getItem('registeredUsers')) || [];
+
+    // وظيفة حفظ البيانات
+    function saveData() {
+        const name = document.getElementById('userName').value;
+        const email = document.getElementById('userEmail').value;
+        const time = new Date().toLocaleString('ar-EG');
+
+        if (name === "" || email === "") {
+            alert("يرجى ملء جميع الحقول!");
+            return;
+        }
+
+        const newUser = { name, email, time };
+        users.push(newUser);
+        
+        // حفظ في ذاكرة المتصفح الدائمة (LocalStorage)
+        localStorage.setItem('registeredUsers', JSON.stringify(users));
+
+        alert("تم تسجيل بياناتك بنجاح!");
+        document.getElementById('userName').value = "";
+        document.getElementById('userEmail').value = "";
+    }
+
+    // إظهار واجهة الكود السري
+    function showAdminPrompt() {
+        switchView('admin-prompt');
+    }
+
+    // التحقق من كود المدير
+    function verifyAdmin() {
+        const enteredCode = document.getElementById('adminCodeInput').value;
+        if (enteredCode === SECRET_CODE) {
+            renderTable();
+            switchView('data-view');
+        } else {
+            alert("الكود خاطئ! لا يمكنك الوصول.");
+        }
+        document.getElementById('adminCodeInput').value = "";
+    }
+
+    // عرض البيانات في الجدول
+    function renderTable() {
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = "";
+
+        if (users.length === 0) {
+            tableBody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>لا توجد بيانات مسجلة بعد.</td></tr>";
+            return;
+        }
+
+        users.forEach(user => {
+            const row = `<tr>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${user.time}</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+        });
+    }
+
+    // مسح البيانات
+    function clearAllData() {
+        if (confirm("هل أنت متأكد من مسح جميع البيانات؟ لا يمكن التراجع!")) {
+            users = [];
+            localStorage.removeItem('registeredUsers');
+            renderTable();
+        }
+    }
+
+    // التنقل بين الواجهات
+    function switchView(viewId) {
+        document.getElementById('login-view').classList.add('hidden');
+        document.getElementById('admin-prompt').classList.add('hidden');
+        document.getElementById('data-view').classList.add('hidden');
+        
+        document.getElementById(viewId).classList.remove('hidden');
+    }
+
+    function goBack() {
+        switchView('login-view');
+    }
+</script>
+
+</body>
+</html>
